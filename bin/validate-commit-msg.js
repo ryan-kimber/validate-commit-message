@@ -3,6 +3,10 @@
 'use strict';
 
 var exec = require('child_process').exec;
+var exists = require('fs').existsSync;
+var fileInfo = require('fs').lstatSync;
+var read = require('fs').readFileSync;
+var filename = './.git';
 
 function stdExecCallback(error, stdout, stderr) {
   if (stdout) {
@@ -17,11 +21,11 @@ function stdExecCallback(error, stdout, stderr) {
 }
 
 function prehook() {
-  exec('rm -f ./.git/hooks/commit-msg');
+  exec('rm -f ' + getGitFolder() + '/hooks/commit-msg');
 }
 
 function posthook() {
-  exec('chmod +x ./.git/hooks/commit-msg',
+  exec('chmod +x ' + getGitFolder() + '/hooks/commit-msg',
     function callback(error, stdout, stderr) {
       if (stdout) {
         console.log(stdout);
@@ -40,8 +44,27 @@ function posthook() {
 function hook() {
   prehook();
   exec('ln -s ../../node_modules/validate-commit-message/lib/validate-commit-msg.js' +
-    ' ./.git/hooks/commit-msg', stdExecCallback);
+    ' ' + getGitFolder() + '/hooks/commit-msg', stdExecCallback);
   posthook();
+}
+
+function getGitFolder() {
+    var gitDirLocation = filename;
+    if (!exists(gitDirLocation)) {
+        throw new Error('Cannot find file ' + gitDirLocation);
+    }
+
+    if(!fileInfo(gitDirLocation).isDirectory()) {
+        var unparsedText = '' + read(gitDirLocation);
+        gitDirLocation = unparsedText.substring('gitdir: '.length).trim();
+    }
+
+    if (!exists(gitDirLocation)) {
+        throw new Error('Cannot find file ' + gitDirLocation);
+    }
+
+    return gitDirLocation;
+
 }
 
 hook();
